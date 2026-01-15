@@ -1,2 +1,3 @@
-# auditauth-next
-The AuditAuth SDK for Nextjs
+# @auditauth/next
+
+Official AuditAuth SDK for Next.js (App Router).
