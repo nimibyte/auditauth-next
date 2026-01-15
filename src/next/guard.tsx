@@ -5,7 +5,7 @@ import { SessionUser } from "./types";
 import { SETTINGS } from "./settings";
 
 type AuthContextValue = {
-  user: SessionUser | null;
+  user: SessionUser;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
@@ -23,7 +23,7 @@ type AuditAuthGuardProps = {
 };
 
 const AuditAuthGuard = (props: AuditAuthGuardProps) => {
-  const [user, setUser] = useState<SessionUser | null>(null);
+  const [user, setUser] = useState<SessionUser>({} as SessionUser);
 
   useEffect(() => {
     let cancelled = false;
@@ -61,7 +61,7 @@ const AuditAuthGuard = (props: AuditAuthGuardProps) => {
     user,
   }), [user]);
 
-  if (!user) return null;
+  if (!user.name) return null;
 
   return (
     <AuthContext.Provider value={value}>

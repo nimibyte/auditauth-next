@@ -1,6 +1,6 @@
 {
   "name": "@auditauth/next",
-  "version": "0.1.0",
+  "version": "0.1.7",
   "description": "Official AuditAuth SDK for Next.js",
   "license": "MIT",
   "author": "Nimibyte",
@@ -26,6 +26,7 @@
     "react-dom": ">=18"
   },
   "dependencies": {
+    "@auditauth/next": "^0.1.6",
     "crypto": "^1.0.1",
     "jose": "^5.2.0"
   },

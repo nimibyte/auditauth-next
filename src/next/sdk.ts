@@ -237,11 +237,6 @@ class AuditAuthNext {
     if (res.status === 401 && refresh) {
       const data = await this.refresh(refresh);
       if (data?.access_token && data?.refresh_token) {
-        this.setCookieTokens({
-          at: data.access_token,
-          rt: data.refresh_token,
-        });
-
         res = await doFetch(data.access_token);
       }
     }
@@ -268,20 +263,11 @@ class AuditAuthNext {
   private pushMetric(payload: Metric) {
     let sid = this.cookies.get(SETTINGS.cookies.session_id.name);
 
-    if (!sid) {
-      sid = 's_' + crypto.randomUUID();
-      this.cookies.set(
-        SETTINGS.cookies.session_id.name,
-        sid,
-        SETTINGS.cookies.session_id.config,
-      );
-    }
-
     queueMicrotask(() => {
       fetch(`${this.config.baseUrl}${SETTINGS.bff.paths.metrics}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...payload, session_id: sid }),
+        body: JSON.stringify({ ...payload, session_id: sid ?? crypto.randomUUID() }),
       }).catch(() => { });
     });
   }
@@ -375,20 +361,4 @@ class AuditAuthNext {
   }
 }
 
-/* -------------------------------------------------------------------------- */
-/*                             CLIENT SHORTCUTS                               */
-/* -------------------------------------------------------------------------- */
-
-const login = () => {
-  window.location.href = SETTINGS.bff.paths.login;
-};
-
-const logout = () => {
-  window.location.href = SETTINGS.bff.paths.logout;
-};
-
-const goToPortal = () => {
-  window.location.href = SETTINGS.bff.paths.portal;
-};
-
-export { AuditAuthNext, login, logout, goToPortal };
+export { AuditAuthNext };
