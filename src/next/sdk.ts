@@ -278,6 +278,7 @@ class AuditAuthNext {
   /* ------------------------------------------------------------------------ */
 
   async middleware(_request: NextRequest) {
+    console.log('testlog>>>>>');
     const { access, refresh } = this.getCookieTokens();
 
     if (access && await this.verifyAccessToken(access)) {
