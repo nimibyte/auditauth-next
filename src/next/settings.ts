@@ -15,6 +15,7 @@ const SETTINGS = {
       logout: '/api/auditauth/logout',
       portal: '/api/auditauth/portal',
       session: '/api/auditauth/session',
+      refresh: '/api/auditauth/refresh',
     }
   },
   cookies: {

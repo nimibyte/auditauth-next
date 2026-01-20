@@ -215,7 +215,11 @@ class AuditAuthNext {
 
     const body = await res.json();
 
-    return { ok: true, url: `${body.redirectUrl}?code=${body.code}&redirectUrl=${this.config.redirectUrl}`, reason: null };
+    return {
+      ok: true,
+      url: `${body.redirectUrl}?code=${body.code}&redirectUrl=${this.config.redirectUrl}`,
+      reason: null,
+    };
   }
 
   /* ------------------------------------------------------------------------ */
