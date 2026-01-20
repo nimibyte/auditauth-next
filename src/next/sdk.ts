@@ -4,6 +4,7 @@ import { importSPKI, jwtVerify } from 'jose';
 import {
   AuditAuthConfig,
   CookieAdapter,
+  CredentialResponse,
   Metric,
   RequestMethod,
   Session,
@@ -38,7 +39,7 @@ class AuditAuthNext {
   /*                             AUTH PRIMITIVES                              */
   /* ------------------------------------------------------------------------ */
 
-  private async verifyAccessToken(token: string): Promise<boolean> {
+  async verifyAccessToken(token: string): Promise<boolean> {
     try {
       cachedKey =
         cachedKey ||
@@ -62,17 +63,31 @@ class AuditAuthNext {
     };
   }
 
-  private setCookieTokens(tokens: { at: string; rt: string }) {
+  private setCookieTokens(params: CredentialResponse) {
+    const isSecure = this.config.redirectUrl.includes('https');
+
     this.cookies.set(
       SETTINGS.cookies.access.name,
-      tokens.at,
-      SETTINGS.cookies.access.config,
+      params.access_token,
+      {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: isSecure,
+        path: '/',
+        maxAge: params.access_expires_seconds - 60,
+      },
     );
 
     this.cookies.set(
       SETTINGS.cookies.refresh.name,
-      tokens.rt,
-      SETTINGS.cookies.refresh.config,
+      params.refresh_token,
+      {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: isSecure,
+        path: '/',
+        maxAge: params.refresh_expires_seconds - 60,
+      }
     );
   }
 
@@ -145,15 +160,25 @@ class AuditAuthNext {
       },
     };
 
+    const isSecure = this.config.redirectUrl.includes('http');
+
     this.cookies.set(
       SETTINGS.cookies.session.name,
       JSON.stringify(session),
-      SETTINGS.cookies.session.config,
+      {
+        httpOnly: true,
+        sameSite: 'lax',
+        secure: isSecure,
+        path: '/',
+        maxAge: result.refresh_expires_seconds - 60,
+      },
     );
 
     this.setCookieTokens({
-      at: result.access_token,
-      rt: result.refresh_token,
+      access_token: result.access_token,
+      access_expires_seconds: result.access_expires_seconds,
+      refresh_token: result.refresh_token,
+      refresh_expires_seconds: result.refresh_expires_seconds,
     });
 
     return { ok: true, url: this.config.redirectUrl };
@@ -197,7 +222,7 @@ class AuditAuthNext {
   /*                              REFRESH FLOW                                 */
   /* ------------------------------------------------------------------------ */
 
-  private async refresh(refreshToken: string) {
+  private async refreshRequest(refreshToken: string): Promise<CredentialResponse | null> {
     try {
       const response = await fetch(`${SETTINGS.domains.api}/auth/refresh`, {
         method: 'POST',
@@ -234,9 +259,8 @@ class AuditAuthNext {
     const start = performance.now();
     let res = await doFetch(access);
 
-    // Attempt refresh once on 401
     if (res.status === 401 && refresh) {
-      const data = await this.refresh(refresh);
+      const data = await this.refreshRequest(refresh);
       if (data?.access_token && data?.refresh_token) {
         res = await doFetch(data.access_token);
       }
@@ -261,93 +285,6 @@ class AuditAuthNext {
   /*                                METRICS                                    */
   /* ------------------------------------------------------------------------ */
 
-  private pushMetric(payload: Metric) {
-    let sid = this.cookies.get(SETTINGS.cookies.session_id.name);
-
-    queueMicrotask(() => {
-      fetch(`${this.config.baseUrl}${SETTINGS.bff.paths.metrics}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...payload, session_id: sid ?? crypto.randomUUID() }),
-      }).catch(() => { });
-    });
-  }
-
-  /* ------------------------------------------------------------------------ */
-  /*                               MIDDLEWARE                                  */
-  /* ------------------------------------------------------------------------ */
-
-  async middleware(_request: NextRequest) {
-    console.log('testlog>>>>>');
-    const { access, refresh } = this.getCookieTokens();
-
-    if (access && await this.verifyAccessToken(access)) {
-      return NextResponse.next();
-    }
-
-    if (refresh) {
-      const data = await this.refresh(refresh);
-      if (data?.access_token && data?.refresh_token) {
-        this.setCookieTokens({
-          at: data.access_token,
-          rt: data.refresh_token,
-        });
-      }
-    }
-
-    return NextResponse.next();
-  }
-
-  /* ------------------------------------------------------------------------ */
-  /*                               BFF HANDLERS                               */
-  /* ------------------------------------------------------------------------ */
-
-  getHandlers() {
-    return {
-      GET: async (req: NextRequest, ctx: { params: Promise<{ auditauth: string[] }> }) => {
-        const action = (await ctx.params).auditauth[0];
-
-        switch (action) {
-          case 'login':
-            return NextResponse.redirect(await this.buildAuthUrl());
-
-          case 'callback': {
-            const result = await this.callback(req);
-            return NextResponse.redirect(result.url);
-          }
-
-          case 'logout':
-            await this.logout();
-            return NextResponse.redirect(this.config.redirectUrl);
-
-          case 'portal': {
-            const result = await this.getPortalUrl();
-            return result.ok && result.url
-              ? NextResponse.redirect(result.url)
-              : NextResponse.redirect(`${SETTINGS.domains.client}/auth/invalid`);
-          }
-
-          case 'session': {
-            const user = this.getSession();
-            if (!user) return new NextResponse(null, { status: 401 });
-            return NextResponse.json({ user });
-          }
-
-          default:
-            return new Response('not found', { status: 404 });
-        }
-      },
-
-      POST: async (req: Request, ctx: { params: Promise<{ auditauth: string[] }> }) => {
-        const action = (await ctx.params).auditauth[0];
-        if (action === 'metrics') {
-          return this.metrics(await req.json());
-        }
-        return new Response('not found', { status: 404 });
-      },
-    };
-  }
-
   async metrics(payload: Metric) {
     await fetch(`${SETTINGS.domains.api}/metrics`, {
       method: 'POST',
@@ -361,6 +298,110 @@ class AuditAuthNext {
 
     return new Response(null, { status: 204 });
   }
+
+  private pushMetric(payload: Metric) {
+    let sid = this.cookies.get(SETTINGS.cookies.session_id.name);
+
+    queueMicrotask(() => {
+      fetch(`${this.config.baseUrl}${SETTINGS.bff.paths.metrics}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...payload, session_id: sid ?? crypto.randomUUID() }),
+      }).catch(() => { });
+    });
+  }
+  /* ------------------------------------------------------------------------ */
+  /*                                METRICS                                    */
+  /* ------------------------------------------------------------------------ */
+
+  async refresh() {
+    const { refresh } = this.getCookieTokens();
+
+    if (!refresh) return { ok: false };
+
+    const result = await this.refreshRequest(refresh);
+
+    if (!result) return { ok: false };
+
+    this.setCookieTokens(result);
+
+    return { ok: true };
+  }
+
+  /* ------------------------------------------------------------------------ */
+  /*                               MIDDLEWARE                                  */
+  /* ------------------------------------------------------------------------ */
+
+  async middleware(request: NextRequest) {
+    const { access, refresh } = this.getCookieTokens();
+    const url = request.nextUrl;
+
+    if (access && refresh) return NextResponse.next();
+
+    if (!refresh) return NextResponse.redirect(new URL('/api/auditauth/login', request.url));
+
+    if (refresh && !access) return NextResponse.redirect(new URL(`/api/auditauth/refresh?redirectUrl=${url}`, request.url));
+
+    return NextResponse.next();
+  }
+
+  /* ------------------------------------------------------------------------ */
+  /*                               BFF HANDLERS                               */
+  /* ------------------------------------------------------------------------ */
+
+  getHandlers() {
+    return {
+      GET: async (req: NextRequest, ctx: { params: Promise<{ auditauth: string[] }> }) => {
+        const action = (await ctx.params).auditauth[0];
+        const redirectUrl = req.nextUrl.searchParams.get('redirectUrl');
+
+        switch (action) {
+          case 'login': {
+            const url = await this.buildAuthUrl();
+            return NextResponse.redirect(url);
+          };
+          case 'refresh': {
+            const { ok } = await this.refresh();
+            if (ok) return NextResponse.redirect(redirectUrl || this.config.redirectUrl);
+
+            const url = await this.buildAuthUrl();
+            return NextResponse.redirect(url);
+          };
+          case 'callback': {
+            const { url } = await this.callback(req);
+            return NextResponse.redirect(url);
+          };
+          case 'logout': {
+            await this.logout();
+            return NextResponse.redirect(this.config.redirectUrl);
+          };
+          case 'portal': {
+            const { ok, url } = await this.getPortalUrl();
+            return ok && url
+              ? NextResponse.redirect(url)
+              : NextResponse.redirect(`${SETTINGS.domains.client}/auth/invalid`);
+          };
+          case 'session': {
+            const user = this.getSession();
+            if (!user) return new NextResponse(null, { status: 401 });
+            return NextResponse.json({ user });
+          };
+          default: {
+            return new Response('not found', { status: 404 });
+          };
+        }
+      },
+
+      POST: async (req: Request, ctx: { params: Promise<{ auditauth: string[] }> }) => {
+        const action = (await ctx.params).auditauth[0];
+        if (action === 'metrics') {
+          return this.metrics(await req.json());
+        }
+        return new Response('not found', { status: 404 });
+      },
+    };
+  }
+
 }
 
 export { AuditAuthNext };

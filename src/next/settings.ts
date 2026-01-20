@@ -20,43 +20,15 @@ const SETTINGS = {
   cookies: {
     access: {
       name: 'auditauth_access',
-      config: {
-        httpOnly: true,
-        sameSite: 'lax',
-        secure: false,
-        path: '/',
-        maxAge: 60 * 15,
-      }
     },
     session: {
       name: 'auditauth_session',
-      config: {
-        maxAge: 60 * 60 * 24,
-        httpOnly: true,
-        secure: false,
-        path: "/",
-        sameSite: "lax",
-      },
     },
     refresh: {
       name: 'auditauth_refresh',
-      config: {
-        httpOnly: true,
-        sameSite: 'lax',
-        secure: false,
-        path: '/',
-        maxAge: 60 * 60 * 24,
-      }
     },
     session_id: {
       name: 'auditauth_sid',
-      config: {
-        httpOnly: false,
-        sameSite: 'lax',
-        secure: false,
-        path: '/',
-        maxAge: 60 * 60,
-      }
     }
   }
 } as const;

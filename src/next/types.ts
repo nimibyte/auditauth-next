@@ -6,6 +6,13 @@ type AuditAuthConfig = {
   appId: string;
 };
 
+type CredentialResponse = {
+  access_token: string;
+  access_expires_seconds: number;
+  refresh_token: string;
+  refresh_expires_seconds: number;
+};
+
 type SessionUser = {
   _id: string;
   name: string;
@@ -58,6 +65,7 @@ type CookieAdapter = {
 
 export type {
   AuditAuthConfig,
+  CredentialResponse,
   SessionUser,
   Session,
   RequestMethod,
