@@ -19,10 +19,10 @@ const auditauthFetch = async (url: string, init: RequestInit = {}) => {
     });
 
   const start = performance.now();
+
   let response = await doFetch(access_token?.value);
 
   if (response.status === 401 && refresh_token) {
-
     const refreshResponse = await fetch(`${SETTINGS.domains.api}/auth/refresh`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -39,7 +39,6 @@ const auditauthFetch = async (url: string, init: RequestInit = {}) => {
     if (data?.access_token && data?.refresh_token) {
       response = await doFetch(data.access_token);
     }
-
   }
 
   let sid = cookieManager.get(SETTINGS.cookies.session_id.name);
