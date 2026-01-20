@@ -16,5 +16,4 @@ const goToPortal = () => {
   window.location.href = SETTINGS.bff.paths.portal;
 };
 
-
 export { login, logout, goToPortal };
