@@ -338,9 +338,9 @@ class AuditAuthNext {
 
     if (access && refresh) return NextResponse.next();
 
-    if (!refresh) return NextResponse.redirect(new URL('/api/auditauth/login', request.url));
+    if (!refresh) return NextResponse.redirect(new URL(SETTINGS.bff.paths.login, request.url));
 
-    if (refresh && !access) return NextResponse.redirect(new URL(`/api/auditauth/refresh?redirectUrl=${url}`, request.url));
+    if (refresh && !access) return NextResponse.redirect(new URL(`${SETTINGS.bff.paths.refresh}?redirectUrl=${url}`, request.url));
 
     return NextResponse.next();
   }
