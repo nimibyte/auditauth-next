@@ -35,7 +35,7 @@ class AuditAuthNext {
   }
 
   /* ------------------------------------------------------------------------ */
-  /*                             AUTH PRIMITIVES                               */
+  /*                             AUTH PRIMITIVES                              */
   /* ------------------------------------------------------------------------ */
 
   private async verifyAccessToken(token: string): Promise<boolean> {
@@ -77,7 +77,7 @@ class AuditAuthNext {
   }
 
   /* ------------------------------------------------------------------------ */
-  /*                              SESSION HELPERS                              */
+  /*                              SESSION HELPERS                             */
   /* ------------------------------------------------------------------------ */
 
   getSession(): SessionUser | null {
@@ -91,7 +91,7 @@ class AuditAuthNext {
   }
 
   /* ------------------------------------------------------------------------ */
-  /*                              AUTH FLOWS                                   */
+  /*                              AUTH FLOWS                                  */
   /* ------------------------------------------------------------------------ */
 
   private async buildAuthUrl(): Promise<URL> {
@@ -113,6 +113,7 @@ class AuditAuthNext {
 
   async callback(request: NextRequest) {
     const code = new URL(request.url).searchParams.get('code');
+
     if (!code) {
       return {
         ok: false,
@@ -297,7 +298,7 @@ class AuditAuthNext {
   }
 
   /* ------------------------------------------------------------------------ */
-  /*                               BFF HANDLERS                                */
+  /*                               BFF HANDLERS                               */
   /* ------------------------------------------------------------------------ */
 
   getHandlers() {
