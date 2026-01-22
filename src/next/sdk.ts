@@ -188,7 +188,7 @@ class AuditAuthNext {
     const { access } = this.getCookieTokens();
     if (access) {
       await fetch(`${SETTINGS.domains.api}/auth/revoke`, {
-        method: 'GET',
+        method: 'PATCH',
         headers: { Authorization: `Bearer ${access}` },
       }).catch(() => { });
     }
