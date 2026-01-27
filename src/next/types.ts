@@ -1,5 +1,4 @@
 type AuditAuthConfig = {
-  requestUrl: string;
   apiKey: string;
   redirectUrl: string;
   baseUrl: string;

@@ -27,8 +27,13 @@ class AuditAuthNext {
   private cookies: CookieAdapter;
 
   constructor(config: AuditAuthConfig, cookies: CookieAdapter) {
-    if (!cookies.get || !cookies.set) {
-      throw new Error('Missing cookie adapter');
+    if (!config.appId) throw new Error('Missing appId');
+    if (!config.apiKey) throw new Error('Missing apiKey');
+    if (!config.baseUrl) throw new Error('Missing baseUrl');
+    if (!config.redirectUrl) throw new Error('Missing redirectUrl');
+
+    if (!cookies?.get || !cookies?.set || !cookies?.remove) {
+      throw new Error('Invalid cookie adapter');
     }
 
     this.config = config;
@@ -248,11 +253,11 @@ class AuditAuthNext {
   /*                         REQUEST WITH AUTO-REFRESH                         */
   /* ------------------------------------------------------------------------ */
 
-  async request(path: string, init: RequestInit = {}) {
+  async request(url: string, init: RequestInit = {}) {
     const { access, refresh } = this.getCookieTokens();
 
     const doFetch = (token?: string) =>
-      fetch(`${this.config.requestUrl}${path}`, {
+      fetch(url, {
         ...init,
         headers: {
           ...init.headers,
@@ -276,7 +281,7 @@ class AuditAuthNext {
       target: {
         type: 'api',
         method: (init.method as RequestMethod) || 'GET',
-        path,
+        path: url,
         status: res.status,
         duration_ms: Math.round(performance.now() - start),
       },
@@ -345,6 +350,15 @@ class AuditAuthNext {
     if (!refresh) return NextResponse.redirect(new URL(SETTINGS.bff.paths.login, request.url));
 
     if (refresh && !access) return NextResponse.redirect(new URL(`${SETTINGS.bff.paths.refresh}?redirectUrl=${url}`, request.url));
+
+    this.pushMetric({
+      event_type: 'navigation',
+      runtime: 'browser',
+      target: {
+        type: 'page',
+        path: url.pathname,
+      },
+    });
 
     return NextResponse.next();
   }
