@@ -1,6 +1,6 @@
 {
   "name": "@auditauth/next",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "description": "Official AuditAuth SDK for Next.js",
   "license": "MIT",
   "author": "Nimibyte",
