@@ -41,8 +41,6 @@ const auditauthFetch = async (url: string, init: RequestInit = {}) => {
     }
   }
 
-  let sid = cookieManager.get(SETTINGS.cookies.session_id.name);
-
   queueMicrotask(() => {
     const payload = {
       event_type: 'request',
@@ -59,7 +57,7 @@ const auditauthFetch = async (url: string, init: RequestInit = {}) => {
     fetch(`${SETTINGS.bff.paths.metrics}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...payload, session_id: sid ?? crypto.randomUUID() }),
+      body: JSON.stringify({ ...payload }),
     }).catch(() => { });
   });
 

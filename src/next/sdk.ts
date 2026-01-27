@@ -302,20 +302,19 @@ class AuditAuthNext {
         'x-auditauth-app': this.config.appId,
         'x-auditauth-key': this.config.apiKey,
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({ ...payload }),
     });
 
     return new Response(null, { status: 204 });
   }
 
   private pushMetric(payload: Metric) {
-    let sid = this.cookies.get(SETTINGS.cookies.session_id.name);
-
+    const session_id = this.cookies.get(SETTINGS.cookies.session_id.name);
     queueMicrotask(() => {
       fetch(`${this.config.baseUrl}${SETTINGS.bff.paths.metrics}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...payload, session_id: sid ?? crypto.randomUUID() }),
+        body: JSON.stringify({ ...payload, session_id }),
       }).catch(() => { });
     });
   }
@@ -346,6 +345,16 @@ class AuditAuthNext {
     const url = request.nextUrl;
 
     if (access && refresh) {
+      const sid = this.cookies.get(SETTINGS.cookies.session_id.name);
+      if (!sid) {
+        this.cookies.set(SETTINGS.cookies.session_id.name, crypto.randomUUID(), {
+          httpOnly: true,
+          sameSite: 'lax',
+          secure: this.config.baseUrl.startsWith('https'),
+          path: '/',
+          maxAge: 60 * 30,
+        })
+      }
 
       this.pushMetric({
         event_type: 'navigation',
