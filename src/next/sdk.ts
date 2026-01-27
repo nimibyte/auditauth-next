@@ -345,20 +345,23 @@ class AuditAuthNext {
     const { access, refresh } = this.getCookieTokens();
     const url = request.nextUrl;
 
-    if (access && refresh) return NextResponse.next();
+    if (access && refresh) {
+
+      this.pushMetric({
+        event_type: 'navigation',
+        runtime: 'browser',
+        target: {
+          type: 'page',
+          path: url.pathname,
+        },
+      });
+
+      return NextResponse.next();
+    }
 
     if (!refresh) return NextResponse.redirect(new URL(SETTINGS.bff.paths.login, request.url));
 
     if (refresh && !access) return NextResponse.redirect(new URL(`${SETTINGS.bff.paths.refresh}?redirectUrl=${url}`, request.url));
-
-    this.pushMetric({
-      event_type: 'navigation',
-      runtime: 'browser',
-      target: {
-        type: 'page',
-        path: url.pathname,
-      },
-    });
 
     return NextResponse.next();
   }
