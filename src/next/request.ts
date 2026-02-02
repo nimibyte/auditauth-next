@@ -3,11 +3,32 @@
 import { cookies } from "next/headers";
 import { SETTINGS } from "./settings";
 import { RequestMethod } from "./types";
+import { headers } from 'next/headers';
+
+const getRequestOrigin = async (): Promise<string> => {
+  const h = await headers();
+
+  const proto =
+    h.get('x-forwarded-proto') ??
+    (process.env.NODE_ENV === 'production' ? 'https' : 'http');
+
+  const host =
+    h.get('x-forwarded-host') ??
+    h.get('host');
+
+  if (!host) {
+    throw new Error('Cannot resolve request origin');
+  }
+
+  return `${proto}://${host}`;
+}
 
 const auditauthFetch = async (url: string, init: RequestInit = {}) => {
   const cookieManager = await cookies();
+  const origin = await getRequestOrigin();
   const access_token = cookieManager.get(SETTINGS.cookies.access.name);
   const refresh_token = cookieManager.get(SETTINGS.cookies.refresh.name);
+  const session_id = cookieManager.get(SETTINGS.cookies.session_id.name)?.value;
 
   const doFetch = (token?: string) =>
     fetch(url, {
@@ -54,10 +75,10 @@ const auditauthFetch = async (url: string, init: RequestInit = {}) => {
       },
     };
 
-    fetch(`${SETTINGS.bff.paths.metrics}`, {
+    fetch(`${origin}${SETTINGS.bff.paths.metrics}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...payload }),
+      body: JSON.stringify({ ...payload, session_id }),
     }).catch(() => { });
   });
 
