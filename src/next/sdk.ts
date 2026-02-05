@@ -115,7 +115,7 @@ class AuditAuthNext {
   /* ------------------------------------------------------------------------ */
 
   private async buildAuthUrl(): Promise<URL> {
-    const response = await fetch(`${SETTINGS.domains.api}/apps/login`, {
+    const response = await fetch(`${SETTINGS.domains.api}/applications/login`, {
       method: 'POST',
       headers: { 'x-api-key': this.config.apiKey },
     });
